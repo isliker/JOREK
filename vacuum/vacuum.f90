@@ -13,6 +13,7 @@ module vacuum
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
   logical             :: CARIDDI_mode                    !< CARIDDI or STARWALL
+  logical             :: vacuum_min                      !< Mode to minimalize memory consumption
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity_fact           !< Scaling factor for the wall and coil resistivities specified in STARWALL
@@ -36,18 +37,11 @@ module vacuum
 
   !> @name JOREK vacuum response matrices
   !! Response matrices derived from STARWALL response (w=wall, p=plasma)
-  type(t_distrib_mat)  :: response_m_a                   !< \f$\hat{A}\f$ in the documentation
   real*8, allocatable  :: response_d_b(:)                !< \f$\hat{B}\f$ in the documentation
   real*8, allocatable  :: response_d_c(:)                !< \f$\hat{C}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_d                   !< \f$\hat{D}\f$ in the documentation
   real*8, allocatable  :: response_m_e(:,:)              !< \f$\hat{E}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_f                   !< \f$\hat{F}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_g                   !< \f$\hat{G}\f$ in the documentation
   real*8, allocatable  :: response_m_h(:,:)              !< \f$\hat{H}\f$ in the documentation
   real*8, allocatable  :: response_m_j(:,:)              !< \f$\hat{J}\f$ in the documentation
-  real*8, allocatable  :: response_m_k(:,:)              !< \f$\hat{K}\f$ in the documentation
-  real*8, allocatable  :: response_m_l(:,:)              !< \f$\hat{L}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_v                   !< \f$\hat{V}\f$ in the documentation
   real*8, allocatable  :: response_m_eq(:,:)             !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
@@ -92,6 +86,7 @@ module vacuum
   
   type :: t_starwall_response
     integer :: file_version           = 9999
+    logical :: initialized            = .false.
     integer :: n_bnd                  = -1
     integer :: nd_bez                 = -1
     integer :: ncoil                  = -1
@@ -141,7 +136,6 @@ module vacuum
     type(t_distrib_mat)  :: a_ey
     type(t_distrib_mat)  :: a_ee
     type(t_distrib_mat)  :: a_id
-    type(t_distrib_mat)  :: a_nw
     type(t_distrib_mat)  :: s_ww
     type(t_distrib_mat)  :: s_ww_inv
     real*8,  allocatable :: xyzpot_w(:,:)
@@ -424,6 +418,7 @@ module vacuum
     
     ! --- Preset namelist input parameters.
     CARIDDI_mode         = .false.            !< True if CARIDDI input file
+    vacuum_min           = .false.
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
     find_pf_coil_currents= .false.
@@ -977,6 +972,7 @@ module vacuum
     if ( resistive_wall ) then
       
       call MPI_BCAST(n_wall_curr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(n_coils,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       
       if ( n_wall_curr == 0 ) return
       
@@ -1037,7 +1033,12 @@ module vacuum
         if ( minval(sz_VFB) > 0 ) then
           allocate( vert_FB_response(sz_VFB(1), sz_VFB(2)) )
         endif
-
+        if ( n_coils>0 ) then
+          if (.not. allocated(I_coils)) then
+            allocate( I_coils(n_coils))
+            I_coils=0.d0
+          end if
+        end if
       end if
       call MPI_BCAST(wall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(dwall_curr,n_wall_curr,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
@@ -1051,6 +1052,7 @@ module vacuum
       if ( minval( sz_pol) > 0 ) call MPI_BCAST(  pf_coil_name,  sz_pol(2)*COIL_NAME_LEN,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
       if ( minval( sz_rmp) > 0 ) call MPI_BCAST( rmp_coil_name,  sz_rmp(2)*COIL_NAME_LEN,MPI_CHARACTER,0,MPI_COMM_WORLD,ierr)
       if ( minval( sz_VFB) > 0 ) call MPI_BCAST(vert_FB_response,  sz_VFB(1)*sz_VFB(2)  ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+      if ( n_coils > 0 ) call MPI_BCAST(I_coils,  n_coils,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
     end if
     
     call MPI_BCAST(current_FB_fact,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

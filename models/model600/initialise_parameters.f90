@@ -3,6 +3,7 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
+use mod_plasma_functions, only: initialise_reference_parameters
 use vacuum
 use pellet_module
 use live_data
@@ -22,12 +23,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
                 restart, rst_format, regrid, bootstrap, write_ps,   &
+                regrid_from_rz,                                     &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg, n_leg_out, n_ext,         &
                 n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
                 n_tht_equidistant,                                  &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
-                XR_z, SIG_z, bgf_r, bgf_z,                          &
+                XR_z, SIG_z, bgf_r, bgf_z, bgf_rpolar, bgf_tht,     &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
                 SIG_up_leg_0, SIG_up_leg_1, SIG_up_priv,            &
@@ -93,6 +95,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pellet_particles, use_pellet,                       &
                 ellip,tria_u,tria_l,quad_u,quad_l,                  &
                 xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
+                forceSDN,                                           &
                 xcase, SDN_threshold, D_perp_file, ZK_perp_file,    &
                 ZK_e_perp_file, ZK_i_perp_file,                     &
                 rho_file, T_file, Ti_file, Te_file, ffprime_file,   &
@@ -109,7 +112,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 refinement, force_central_node,                     &
                 fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
-                eta_T_dependent, visco_T_dependent,                 &
+                eta_T_dependent, visco_T_dependent, T_max_visco,    &
                 zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 
                 heatsource_psin, heatsource_sig,                    &
                 heatsource_e_psin, heatsource_e_sig,                &
@@ -208,7 +211,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 visco_par_heating, constant_imp_source,             &
                 T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar,              &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
-                alpha_Newton
+                alpha_Newton, vacuum_min, strumpack_matching,       &
+                visco_old_setup, visco_heating, eta_coul_log_dep,   &
+                export_polar_boundary, xpoint_search_tries,         &
+                loop_voltage, export_aux_node_list
 
 
 if (my_id .eq. 0) then
@@ -358,6 +364,8 @@ if ( my_id == 0 ) then
     write(*,*) "WARNNING! Currently do not support both with_neutrals and with impurities enabled at the same time while injecting background species! Should be fixed sonn. EXITING!"
     stop
   endif
+
+  call initialise_reference_parameters()
 
 end if
 

@@ -57,7 +57,7 @@ program RST_convert_hdf52bin
 
   ! --- Read the restart HDF5 file
   if (verbose) write (6,*) " =============> rst_hdf52bin for filename = ",filein
-  call import_hdf5_restart(node_list, element_list, filein, rst_format, ierr)
+  call import_hdf5_restart(node_list, element_list, filein, rst_format, ierr, aux_node_list=aux_node_list)
 
   index_now = index_start
   t_now     = t_start
@@ -70,13 +70,13 @@ program RST_convert_hdf52bin
   if ( freeboundary ) then
     call get_vacuum_response(0, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &
       resistive_wall)
-    call update_response(my_id, tstep, freeboundary_equil, resistive_wall)
+    call update_response(my_id, tstep, resistive_wall)
     call import_external_fields('coil_field.dat', 0)
     if ( .not. wall_curr_initialized ) call init_wall_currents(0, resistive_wall)
   end if
 
   ! -- Write the BINARY restart file
   if (verbose) write (6,*) " =============> rst_hdf52bin, write BIN file = ",fileout
-  call export_binary_restart(node_list, element_list, fileout)
+  call export_binary_restart(node_list, element_list, fileout, aux_node_list)
 
 end program RST_convert_hdf52bin
