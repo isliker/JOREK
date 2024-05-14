@@ -423,7 +423,7 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
   if (my_id .eq. 0) then
     ! Find the following file (next timestep number)
     next_file_found=.false.
-    do di=1,20
+    do di=1,200 !20
       if (di .le. 2 .and. flip_i12) then ! flip first and second element to search to save effort reading
         i = this%i + (3-di)
       else

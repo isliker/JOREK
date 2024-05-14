@@ -161,6 +161,9 @@ pure subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
   E(3)  = E(3) - R_inv*P_time(1) ! because this is not normalized with t_norm
 
 #endif
+  E = 0.0d0
+  !B = 0.0d0
+  !B(3) = 1.0d0
 
 end subroutine calc_EBpsiU
 
@@ -1126,6 +1129,9 @@ pure subroutine calc_EBNormBGradBCurlbDbdt(fields,time,i_elm,st,phi,E,b, &
   !> compute the dbdt field
   dbdt = ((b(2)*psi_RZ(8)-b(1)*psi_RZ(9))*b +    &
     [psi_RZ(9),-psi_RZ(8),0.d0])*normB_inv*R_inv
+
+  dbdt = 0.0d0
+  E = 0.0d0
 
 end subroutine calc_EBNormBGradBCurlbDbdt
 

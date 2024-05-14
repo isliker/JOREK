@@ -12,12 +12,14 @@ public write_particle_diagnostics, calculate_particle_diagnostics
 !> Cannot use HDF5 types here because these are invalid before h5open_f is called
 !> (I think, did not take the chance)
 integer, parameter :: REAL4 = 1, INT4 = 2, REAL8 = 3
-integer, parameter :: n_vars = 15
+integer, parameter :: n_vars = 22
 character(len=7)  :: var_names(n_vars) = ["e      ", "k      ", "mu     ", &
   "psi_n  ", "psi_bar", "p_phi  ", "weight ", "lost   ", "q      ", "region ", &
-  "theta  ", "phi    ", "R      ", "Z      ","i_elm  "]
-integer, parameter :: var_types(n_vars) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4, REAL4, REAL4,INT4]
-integer, parameter :: n_real8_var      = 3 !count(var_types .eq. REAL8)
+  "theta  ", "phi    ", "R      ", "Z      ","i_elm  ",&
+  "p_par  ", "BR     ", "BZ     ", "Bphi   ", "ER     ", "EZ     ", "Ephi   "]
+integer, parameter :: var_types(n_vars) = [REAL8, REAL8, REAL4, REAL4, REAL4, REAL8, REAL4, INT4, INT4, INT4, REAL4, REAL4, REAL4, REAL4,INT4,&
+REAL8,  REAL8, REAL8, REAL8, REAL8, REAL8, REAL8]
+integer, parameter :: n_real8_var      = 10 !count(var_types .eq. REAL8)
 integer, parameter :: n_real4_var      = 8 !count(var_types .eq. REAL4)
 integer, parameter :: n_int4_var       = 4 !count(var_types .eq. INT4)
 ! HDF5 does not support booleans, use INT4
@@ -536,7 +538,27 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
       ! R
       real_stats_tmp(10) = particles(i)%x(1)
       ! Z
-      real_stats_tmp(11) = particles(i)%x(2)           
+      real_stats_tmp(11) = particles(i)%x(2)
+
+      select type (particle_in => particles(i))
+      type is (particle_gc_relativistic)
+        ! u_par
+        real_stats_tmp(12) = particle_in%p(1)
+        !! mu, again
+        !real_stats_tmp(13) = particle_in%p(2)
+      end select
+      ! BR
+      real_stats_tmp(13) = B(1)
+      ! BZ
+      real_stats_tmp(14) = B(2)
+      ! Bphi
+      real_stats_tmp(15) = B(3)
+      ! ER
+      real_stats_tmp(16) = E(1)
+      ! EZ
+      real_stats_tmp(17) = E(2)
+      ! Ephi
+      real_stats_tmp(18) = E(3)
 
       ! 1. lost (boolean)
       int_stats(i,1) = 0

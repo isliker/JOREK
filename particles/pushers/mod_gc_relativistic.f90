@@ -669,6 +669,9 @@ contains
     !> declare internal variables
     real(kind=8)                               :: B_norm, p_perp
     real(kind=8), dimension(3)                 :: B_hat, e1, e2
+
+    write(6,*) 'HI22 B',B
+    write(6,*) 'HI22 in%p',in%p
     
     out = in !< copy fields common to both particle types
     out%q = in%q !< copy the charge
@@ -682,6 +685,7 @@ contains
     p_perp = sqrt(2.d0*mass*B_norm*in%p(2))
     !> compute particle momenta
     out%p = in%p(1)*B_hat + p_perp*(e1*cos(gyro_angle)+e2*sin(gyro_angle))
+    write(6,*) 'HI22 out%p',out%p
     if(out%q.ne.0) then
        call gc_position_to_particle(node_list,element_list,in%x, &
          in%st,in%i_elm,out%p,out%q,B_hat,B_norm,out%x,          &
@@ -689,6 +693,7 @@ contains
     endif
     !> transform the momenta to cartesian coordinates
     out%p = vector_cylindrical_to_cartesian(out%x(3),out%p)
+    write(6,*) 'HI22 out%p 2',out%p
   end function relativistic_gc_to_relativistic_kinetic 
 
   !> This procedure transforms a particle_gc_relativistic into a particle_gc
