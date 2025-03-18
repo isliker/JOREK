@@ -40,10 +40,13 @@ subroutine preset_parameters
   T_max_eta     = 1.d99
   eta_ohmic     = 0.d0
   T_max_eta_ohm = 1.d99
+  
+  TiTe_ratio    = 0.5d0
 
   visco = 1.d-5
   T_max_visco   = 1.d99
   visco_par = 1.d-5
+  visco_par_par = 0.d0  
   visco_heating     = 0.d0
   visco_par_heating = 0.d0
   visco_old_setup   = .false.
@@ -58,7 +61,8 @@ subroutine preset_parameters
   regrid_from_rz = .false.
   rst_format   = 0             ! use 'old' format for restart import
   write_ps     = .true.           ! write postscript file at the end of the run 
-  
+  gvec_grid_import = .false.
+
   freeboundary_equil = .false. ! use free or fixed boundary equilibrium
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
@@ -104,6 +108,8 @@ subroutine preset_parameters
   n_flux       = 11
   n_tht        = 16
   n_tht_equidistant = .false.
+  m_pol_bc     = 1
+  i_plane_rtree = 1
   
   n_open       = 5
   n_outer      = 0
@@ -156,6 +162,8 @@ subroutine preset_parameters
   R_geo     = 10.d0
   Z_geo     = 0.d0
   amin      = 1.d0
+
+  R_domm        = -10.d0
 
   F0        = 10.d0
   GAMMA     = 5.d0 / 3.d0
@@ -257,8 +265,8 @@ subroutine preset_parameters
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
-  T_min              = 1.0d-20
-  rho_min            = 1.0d-20
+  T_min              = 1.0d-20  !-1.0d20
+  rho_min            = 1.0d-20  !-1.0d20
   T_min_neg          = -1.d12 !< only used if T_min_neg>0 , 2.01d-5*central_density*Tmin_ev (cd = 1, 20 eV)
   T_min_ZKpar        = -1.d12 
   Ti_min_ZKpar       = -1.d12 
@@ -505,13 +513,19 @@ subroutine preset_parameters
   rho_1 =  1.d0   
   FF_0  =  1.d0
   FF_1  =  0.d0
-  
+  phi_0 =  0.d0
+  phi_1 =  0.d0
+
   zj_coef     = 0.d0;  zj_coef(1)  = -1.d0
   T_coef      = 0.d0;  T_coef(1)   = -1.d0
   Te_coef     = 0.d0;  Te_coef(1)  = -1.d0
   Ti_coef     = 0.d0;  Ti_coef(1)  = -1.d0
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
+  dcoef       = 0.d0
+
+  phi_coef    = 0.d0;  phi_coef(1) =  0.d0; phi_coef(4) = 1.d0
+  nu_phi_source = 0.d0
 
   rhon_0 =  0.d0
   rhon_1 =  0.d0
@@ -557,6 +571,7 @@ subroutine preset_parameters
   T_file             = 'none'
   Te_file            = 'none'
   Ti_file            = 'none'
+  phi_file           = 'none'
   Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
@@ -567,6 +582,7 @@ subroutine preset_parameters
   R_Z_psi_bnd_file   = 'none'
   wall_file          = 'none'
   rot_file           = 'none'
+  domm_file          = 'none'
   normalized_velocity_profile = .true.
 
   n_Fprofile_internal = 300 ! model710 only: size of internal numerical F-profile
@@ -619,6 +635,8 @@ subroutine preset_parameters
   tgnum_A3           = 0.d0
 
   keep_current_prof  = .true.               ! Keep the current_source term
+  init_current_prof  = .false.
+  current_prof_initialized = .false.
   
   use_mumps          = .false.              ! Use MUMPS solver
   use_pastix         = .true.               ! Use PASTIX solver
@@ -735,6 +753,7 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
+
   n_adas = 1
   adas_dir = ' '
   imp_type = ' '
@@ -834,9 +853,24 @@ use_ncs            = .false.
 use_ccs            = .false.
 use_pcs            = .false.
 use_pcs_full       = .false.
-use_ionisation     = .true.
-use_sputtering     = .false.
-use_cx             = .true.
+use_kn_ionisation     = .true.
+use_kn_sputtering     = .false.
+use_kn_cx             = .true.
 use_marker         = .false.
+use_kn_recombination = .true.
+use_kn_puffing       = .false.
+use_kn_line_radiation= .true.
+
+n_puff        = 0
+puff_rate     = 0.d0
+r_valve       = 0.d0
+R_valve_loc   = 0.d0
+Z_valve       = 0.d0
+R_valve_loc2  = 0.d0
+Z_valve2      = 0.d0
+
+use_manual_random_seed = .false.
+manual_seed = 498932990          !< chosen arbitarily
+
 
 end subroutine preset_parameters
