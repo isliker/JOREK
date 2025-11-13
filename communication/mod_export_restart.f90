@@ -168,6 +168,7 @@ subroutine export_binary_restart(node_list,element_list,filename,aux_node_list)
   ! Radiation and ionization energy history
   if (index_now .gt. 0) write(21) xtime_radiation(1:index_now)
   if (index_now .gt. 0) write(21) xtime_rad_power(1:index_now)
+  if (index_now .gt. 0) write(21) xtime_rad_cooling_power(1:index_now)
   if (index_now .gt. 0) write(21) xtime_E_ion(1:index_now)
   if (index_now .gt. 0) write(21) xtime_E_ion_power(1:index_now)
   if (index_now .gt. 0) write(21) xtime_P_ei(1:index_now)
@@ -331,6 +332,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename,aux_node_list)
   real(RKIND), allocatable :: t_values(:,:,:,:)            !       n_tor, n_degrees, n_var
   real(RKIND), allocatable :: t_deltas(:,:,:,:)            !       n_tor, n_degrees, n_var
   real(RKIND), allocatable :: t_aux_values(:,:,:,:)        !       n_tor, n_degrees, n_var
+
+  ! Stellarator node members
   real(RKIND), allocatable :: t_pressure(:,:)              !              n_degrees
   real(RKIND), allocatable :: t_r_tor_eq(:,:)              !              n_degrees
   real(RKIND), allocatable :: t_j_field(:,:,:,:)           ! n_coord_tor, n_degrees, n_dim
@@ -338,6 +341,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename,aux_node_list)
   real(RKIND), allocatable :: t_chi_correction(:,:,:)      ! n_coord_tor, n_degrees
   real(RKIND), allocatable :: t_j_source(:,:,:)            !       n_tor, n_degrees
 
+  ! Full MHD node members
   real(RKIND), allocatable :: t_psi_eq(:,:)                ! n_degrees
   real(RKIND), allocatable :: t_Fprof_eq(:,:)              ! n_degrees
 
@@ -364,7 +368,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename,aux_node_list)
 
   ! for axis treatment setting
   character(len=50)        :: t_treat_axis
-  
+
   ! local variables
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
@@ -623,20 +627,32 @@ subroutine export_hdf5_restart(node_list,element_list,filename,aux_node_list)
   call HDF5_array2D_saving(file_id,t_r_tor_eq, &
        node_list%n_nodes,n_degrees,'r_tor_eq'//char(0))
 #if JOREK_MODEL == 180
+  ! Save GVEC fields
   call HDF5_array2D_saving(file_id,t_pressure, &
        node_list%n_nodes,n_degrees,'pressure'//char(0))
   call HDF5_array4D_saving(file_id,t_j_field, &
        node_list%n_nodes,n_coord_tor,n_degrees,n_dim+1,'j_field'//char(0))
   call HDF5_array4D_saving(file_id,t_b_field, &
        node_list%n_nodes,n_coord_tor,n_degrees,n_dim+1,'b_field'//char(0))
+#endif /* JOREK_MODEL == 180 */
+
+#ifdef WITH_TiTe
+  call HDF5_real_saving(file_id,Ti_0,'Ti_0'//char(0))
+  call HDF5_real_saving(file_id,Te_0,'Te_0'//char(0))
+#else
+  call HDF5_real_saving(file_id,T_0,'T_0'//char(0))
 #endif
+
 #ifndef USE_DOMM
   call HDF5_array3D_saving(file_id,t_chi_correction, &
        node_list%n_nodes,n_coord_tor,n_degrees,'chi_correction'//char(0))
 #endif
   call HDF5_array3D_saving(file_id,t_j_source, &
        node_list%n_nodes,n_tor,n_degrees,'j_source'//char(0))
-#endif
+  
+  call HDF5_integer_saving(file_id,n_flux,'n_flux'//char(0))
+  call HDF5_integer_saving(file_id,n_tht, 'n_tht'//char(0))
+#endif /* STELLARATOR_MODEL */
 
 #ifdef fullmhd
   call HDF5_array2D_saving(file_id,t_psi_eq, &
@@ -816,11 +832,13 @@ subroutine export_hdf5_restart(node_list,element_list,filename,aux_node_list)
 
   ! Radiation and ionization energy history
   if (index_now .gt. 0) then
-    if ( allocated(xtime_radiation)   ) call HDF5_array1D_saving(file_id,xtime_radiation, index_now,'xtime_radiation'//char(0))
-    if ( allocated(xtime_rad_power)   ) call HDF5_array1D_saving(file_id,xtime_rad_power, index_now,'xtime_rad_power'//char(0))
-    if ( allocated(xtime_E_ion)       ) call HDF5_array1D_saving(file_id,xtime_E_ion, index_now,'xtime_E_ion'//char(0))
-    if ( allocated(xtime_E_ion_power) ) call HDF5_array1D_saving(file_id,xtime_E_ion_power, index_now,'xtime_E_ion_power'//char(0))
-    if ( allocated(xtime_P_ei)        ) call HDF5_array1D_saving(file_id,xtime_P_ei, index_now,'xtime_P_ei'//char(0))
+    if ( allocated(xtime_radiation)        ) call HDF5_array1D_saving(file_id,xtime_radiation, index_now,'xtime_radiation'//char(0))
+    if ( allocated(xtime_rad_power)        ) call HDF5_array1D_saving(file_id,xtime_rad_power, index_now,'xtime_rad_power'//char(0))
+    if ( allocated(xtime_rad_cooling_power)) call HDF5_array1D_saving(file_id,xtime_rad_cooling_power, index_now,'xtime_rad_cooling_power'//char(0))
+
+    if ( allocated(xtime_E_ion)            ) call HDF5_array1D_saving(file_id,xtime_E_ion, index_now,'xtime_E_ion'//char(0))
+    if ( allocated(xtime_E_ion_power)      ) call HDF5_array1D_saving(file_id,xtime_E_ion_power, index_now,'xtime_E_ion_power'//char(0))
+    if ( allocated(xtime_P_ei)             ) call HDF5_array1D_saving(file_id,xtime_P_ei, index_now,'xtime_P_ei'//char(0))
   end if
 
   ! Dynamically allocate memeries for temporary arrays in order to export
