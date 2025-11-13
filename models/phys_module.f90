@@ -31,7 +31,7 @@ module phys_module
   real*8  :: TiTe_ratio           !< ratio to set ion and electron temperature from T (in model 180): Ti=TiTe_ratio*T; Te=(1.0-TiTe_ratio)*T
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
-  real*8  :: central_mass         !< average ion mass in atomic mass units (constant in time and space)
+  real*8  :: central_mass         !< average ion mass in atomic mass units (constant in time and space, including electron mass)
   real*8  :: sqrt_mu0_rho0        !< Normalization factor \f$\sqrt(\mu_0 \rho_0)\f$ calculated from input
   real*8  :: sqrt_mu0_over_rho0   !< Normalization factor \f$\sqrt(\mu_0/\rho_0)\f$ calculated from input
   real*8  :: gamma                !< ratio of specific heat (typically 5/3)
@@ -79,6 +79,7 @@ module phys_module
   real*8  :: Z_xpoint_limit(2)    !< Search the lower X-point in the region Z < Z_xpoint_limit(1) and the upper X-point in the region Z > Z_xpoint_limit(2) 
   integer :: xpoint_search_tries  !< The number of candidate elements to check for being the element containing the upper or lower X-point.
   logical :: bootstrap            !< Evolve the Bootstrap current consistently with time?
+  real*8  :: bootstrap_psin_cutoff!< Bootstrap-current hard cutoff if simulating X-point plasma.
   real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
   logical :: refinement           !< Use mesh refinement? (not presently available)
   logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids or independent values?
@@ -137,6 +138,9 @@ module phys_module
   logical :: use_mumps_eq         !< Use Mumps equilibrium solver
   logical :: use_pastix_eq        !< Use Pastix equilibrium solver
   logical :: use_strumpack_eq     !< Use Strumpack equilibrium solver  
+  logical :: use_mumps_prj        !< Use Mumps projection solver
+  logical :: use_pastix_prj       !< Use Pastix projection solver
+  logical :: use_strumpack_prj    !< Use Strumpack projection solver  
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
   real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
@@ -217,6 +221,9 @@ module phys_module
    
   ! Stellarator parameters
   logical :: gvec_grid_import     !< Generate grid fourier representation with GVEC
+  logical :: extended_boundary    !< Choose if extended boundary conditions (Biot-Savart version) should be used, default (false) is grad_chi with Dommaschk potentials
+  real*8  :: j_cutoff_rcoord      !< Radial location from which the current is set to zero as it approaches the boundary - rcoord corresponds to the normalised toroidal flux
+  real*8  :: j_cutoff_sig         !< Radial width over which the current is ramped down to zero towards the boundary
 
   !> Points used as blocks to extend grid into complex wall structures, see https://www.jorek.eu/wiki/doku.php?id=wallgrid_tutorial
   real*8  :: surface_cross_tol                                                  !< Tolerance when looking for crossing of polar lines and surfaces, needs to be > 1.0
@@ -306,6 +313,9 @@ module phys_module
              ZK_i_perp_num_tanh, ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig,    &
              ZK_e_perp_num_tanh, ZK_e_perp_num_tanh_psin, ZK_e_perp_num_tanh_sig
   real*8  :: Dn_perp_num
+  logical :: maintain_profiles             !< Add artificial sources to maintain initial rho and T profiles
+                                           !! (diffusion acts on deviation from initial profiles)
+					   !! at present only implemented for stellarator model 183
 
   !> @name Shock-capturing terms
   logical :: use_sc  !< Use shock-capturing stabilization
@@ -483,8 +493,9 @@ module phys_module
   real*8, allocatable  :: xtime_spi_ablation_bg(:,:)      !< The time history of SPI ablation for background species
   real*8, allocatable  :: xtime_spi_ablation_bg_rate(:,:) ! <The time history of SPI ablation rate for bg species
 
-  real*8, allocatable  :: xtime_radiation(:)    !< The time history of radiated energy in SI unit
-  real*8, allocatable  :: xtime_rad_power(:)    !< The time history of radiated power in SI unit
+  real*8, allocatable  :: xtime_radiation(:)         !< The time history of radiated energy in SI unit
+  real*8, allocatable  :: xtime_rad_power(:)         !< The time history of radiated power in SI unit
+  real*8, allocatable  :: xtime_rad_cooling_power(:) !< The time history of radiative power loss from plasma in SI unit
 
   real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
@@ -503,6 +514,7 @@ module phys_module
   character(len=256) :: spi_shard_file(n_inj_max)!< The name of the shard size file
   character(len=256) :: spi_plume_file(n_inj_max)!< The name of the shard information datafile (array)
   logical            :: spi_plume_hdf5           !< if 'spi_plume_file' is in HDF5format?
+  logical            :: spi_abl_mag_reduction    !< Whether to use the magnetic reduction effect described in Eq.(27) of Nucl. Fusion 60 066027
 
   integer :: n_adas             !< Number of species to be traced by ADAS
 
@@ -979,7 +991,8 @@ module phys_module
   !> @name Manual setting of random seed (for testing)
   logical :: use_manual_random_seed                   !< whether the random seed should be manually set
   integer :: manual_seed                              !< the manually set seed value
-
+  logical :: use_fixed_rng_value                      !< forcibly set all rng outputs to return a specific value (set by fixed_rng_value, use this for debugging and testing only)
+  real*8  :: fixed_rng_value                          !< the value the fixed rng is set to when using use_fixed_rng_value
   contains
   
 end module phys_module
