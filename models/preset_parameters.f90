@@ -140,7 +140,8 @@ subroutine preset_parameters
   bgf_rpolar    = 0.6
   bgf_tht       = 0.6
 
-  SIG_closed  = 0.1d0
+  xr_closed   = (/   1.0d0, 9999.d0, 9999.d0 /)
+  SIG_closed  = (/   0.1d0, 9999.d0, 0.1d0   /)
   SIG_open    = 0.1d0
   SIG_outer   = 0.1d0
   SIG_inner   = 0.1d0
@@ -237,6 +238,9 @@ subroutine preset_parameters
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
+  V_pinch_gauss = 0.d0
+  V_pinch_psin  = 0.d0
+  V_pinch_sig   = 1.d0
   D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par_imp        = 0.d0
 
@@ -584,8 +588,9 @@ subroutine preset_parameters
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'
+  v_pinch_file       = 'none'
   R_Z_psi_bnd_file   = 'none'
-  wall_file          = 'none'
+  wall_file          = 'wall.txt'
   rot_file           = 'none'
   domm_file          = 'none'
   normalized_velocity_profile = .true.
@@ -652,9 +657,9 @@ subroutine preset_parameters
   use_pastix_eq      = .false.              ! Use PASTIX equilibrium solver
   use_strumpack_eq   = .false.              ! Use STRUMPACK equilibrium olver  
   
-  use_mumps_prj      = .true.               ! Use MUMPS equilibrium solver
-  use_pastix_prj     = .false.              ! Use PASTIX equilibrium solver
-  use_strumpack_prj  = .false.              ! Use STRUMPACK equilibrium olver  
+  use_mumps_prj      = .true.               ! Use MUMPS projection solver
+  use_pastix_prj     = .false.              ! Use PASTIX projection solver
+  use_strumpack_prj  = .false.              ! Use STRUMPACK projection olver  
 
   refinement         = .false.              ! enable mesh refinement
   force_central_node = .true.               ! force all nodes in the grid center to have the same values in flux surface aligned grids
@@ -807,6 +812,7 @@ subroutine preset_parameters
   spi_tor_rot     = .false.
   spi_num_vol     = .true.
   using_spi       = .false.
+  spi_abl_history_old = .false.
 
   output_prad_phi = .false.
 
@@ -848,6 +854,7 @@ subroutine preset_parameters
   Sigma = 0.d0
 
 !===================== particle input values
+use_particles      = .false.
 n_particles        = 0
 nstep_particles    = 0
 nsubstep_particles = 1
