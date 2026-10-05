@@ -433,6 +433,7 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
   character(len=80) :: restart_file, tmp_name
   integer :: i, j, k, di, ierr, my_id
   logical :: file_exists, next_file_found, flip_i12 = .false.
+  integer :: i_fmt
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   if (present(prefer_plus_2)) then
@@ -448,9 +449,17 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
       else
         i = this%i + di
       end if
-      write(tmp_name,rst_file_ind_fmt(1)) trim(this%basename), i
-      write(restart_file,'(A,A)') trim(tmp_name), '.h5'
-      inquire(file=trim(restart_file), exist=file_exists)
+      !write(tmp_name,rst_file_ind_fmt(1)) trim(this%basename), i
+      !write(restart_file,'(A,A)') trim(tmp_name), '.h5'
+      !inquire(file=trim(restart_file), exist=file_exists)
+      !
+      file_exists = .false.
+      do i_fmt = 1, size(rst_file_ind_fmt)
+        write(tmp_name,rst_file_ind_fmt(i_fmt)) trim(this%basename), i
+        write(restart_file,'(A,A)') trim(tmp_name), '.h5'
+        inquire(file=trim(restart_file), exist=file_exists)
+        if (file_exists) exit
+      end do
       if (file_exists) then
         next_file_found=.true.
 

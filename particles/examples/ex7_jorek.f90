@@ -44,6 +44,9 @@ integer(kind=4) :: ierr, nini, ini
 real*8, dimension(:), allocatable :: xini, yini, zini, cosini, Etotalini 
 real*8, dimension(:), allocatable :: Rini, phiini
 
+real(kind=8) :: t_part
+logical, allocatable :: lost(:)
+
 call sim%initialize(num_groups=1)
 
 ! Set up the diagnostics output
@@ -79,6 +82,7 @@ if (.not. restart) then
   ! Allocate a group and particle(s) of type particle_gc_relativistic
   n_part = 48
   allocate(particle_gc_relativistic::sim%groups(1)%particles(n_part))
+  allocate(lost(n_part)); lost = .false.
   sim%groups(1)%mass = 5.4857990907016d-4 !< particle mass in AMU: electron mass
   ! Set events to write output data and stop the simulation.
   ! One can use read_jorek_fields_interp_linear or read_jorek_fields_interp_hermite_birkhoff,
@@ -136,7 +140,8 @@ else
 	    event(stop_action(),start=sim%time+1.d-8)]
 
   ! Run first event to read the JOREK fields
-  call with(sim, events, at=0.d0)   
+  call with(sim, events, at=0.d0)
+  allocate(lost(size(sim%groups(1)%particles))); lost = .false.
 
 endif
 
@@ -166,15 +171,20 @@ do while (.not. sim%stop_now)
 !      !$omp shared (i, n_steps, timesteps, sim) &
 !      !$omp reduction(+:n_lost)	
       j_loop: do j=1,size(particles,1)
-        write(6,*) 'particle number ',j 
+         if (lost(j)) cycle j_loop
+         write(6,*) 'particle number, sim%time ',j, sim%time
+         t_part = sim%time                 ! every particle starts at the beginning of the interval
         k_loop: do k=1,n_steps
           if (particles(j)%i_elm .le. 0) exit
 
-	  sim%time = sim%time + timesteps(i)
+  	  		!sim%time = sim%time + timesteps(i)
+          	t_part = t_part + timesteps(i)
 	  
-!         call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
-!               sim%groups(i)%mass,particles(j)) !< push in analytical fields
-         call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
+!!!         call runge_kutta_fixed_dt_gc_push(sim%fields,sim%time,timesteps(i), &
+!!!               sim%groups(i)%mass,particles(j)) !< push in analytical fields
+!         	call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
+!              sim%groups(i)%mass,particles(j)) !< push in jorek fields
+         	call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,t_part,timesteps(i), &
               sim%groups(i)%mass,particles(j)) !< push in jorek fields
 !          write(*,*) 'Particle position: ', particles(j)%x(1), particles(j)%x(2), particles(j)%x(3)
 !          write(*,*) 'Particle momenta: ', particles(j)%p(1), particles(j)%p(2)
@@ -184,7 +194,8 @@ do while (.not. sim%stop_now)
 !	    write(22,'(7e26.16)') sim%time, P, P_time, R, Z
 !	  end if
 
-          if (particles(j)%i_elm .le. 0) then
+	  if (particles(j)%i_elm .le. 0) then
+            lost(j) = .true.
 	    n_lost = n_lost + 1
 	    write(*,*) 'PARTICLE Nr. ',j,' IS LOST, STOPPING'
 	    !stop
